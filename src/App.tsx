@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import { ko } from 'date-fns/locale/ko'; // 한국어 로케일 임포트
+import { ko } from 'date-fns/locale'; // 한국어 로케일 임포트
 import 'react-datepicker/dist/react-datepicker.css';
 import './App.css';
 
@@ -15,18 +15,17 @@ interface Task {
 }
 
 const App: React.FC = () => {
-  const [time, setTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date()); // 현재 시간 표시용
   const [tasks, setTasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('golden-tasks');
     return saved ? JSON.parse(saved) : [];
   });
   const [newTaskText, setNewTaskText] = useState('');
-  const [newTaskTime, setNewTaskTime] = useState('');
-  const [newTaskDate, setNewTaskDate] = useState<Date | null>(new Date()); // Date 객체로 변경
+  const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(new Date()); // 날짜와 시간을 동시에 선택
 
   // 시계 업데이트
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -37,14 +36,19 @@ const App: React.FC = () => {
 
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskText || !newTaskTime || !newTaskDate) return;
+    if (!newTaskText || !selectedDateTime) return;
 
-    const formattedDate = newTaskDate.toISOString().split('T')[0]; // ISO 문자열로 저장
+    const formattedDate = selectedDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
+    const formattedTime = selectedDateTime.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }); // HH:MM
 
     const newTask: Task = {
       id: crypto.randomUUID(),
       date: formattedDate,
-      time: newTaskTime,
+      time: formattedTime,
       text: newTaskText,
       completed: false,
     };
@@ -57,15 +61,14 @@ const App: React.FC = () => {
     }));
 
     setNewTaskText('');
-    setNewTaskTime('');
-    setNewTaskDate(new Date()); // 추가 후 현재 날짜로 초기화
+    setSelectedDateTime(new Date()); // 추가 후 현재 날짜/시간으로 초기화
   };
 
   const deleteTask = (id: string) => {
     setTasks(tasks.filter((task: Task) => task.id !== id));
   };
 
-  const formatTime = (date: Date) => {
+  const formatClockTime = (date: Date) => {
     return date.toLocaleTimeString('ko-KR', {
       hour12: false,
       hour: '2-digit',
@@ -74,7 +77,7 @@ const App: React.FC = () => {
     });
   };
 
-  const formatDate = (date: Date) => {
+  const formatClockDate = (date: Date) => {
     return date.toLocaleDateString('ko-KR', {
       weekday: 'long',
       year: 'numeric',
@@ -86,8 +89,8 @@ const App: React.FC = () => {
   return (
     <div className="app-container">
       <section className="clock-section">
-        <div className="clock-time">{formatTime(time)}</div>
-        <div className="clock-date">{formatDate(time)}</div>
+        <div className="clock-time">{formatClockTime(currentTime)}</div>
+        <div className="clock-date">{formatClockDate(currentTime)}</div>
       </section>
 
       <section className="scheduler-card">
@@ -99,20 +102,17 @@ const App: React.FC = () => {
         <form onSubmit={addTask} className="input-group">
           <div className="input-row">
             <DatePicker
-              selected={newTaskDate}
-              onChange={(date: Date | null) => setNewTaskDate(date)}
-              dateFormat="yyyy년 MM월 dd일"
-              className="date-picker-input" // 커스텀 스타일 적용을 위한 클래스
-              wrapperClassName="date-picker-wrapper" // 래퍼에 스타일 적용을 위한 클래스
+              selected={selectedDateTime}
+              onChange={(date: Date | null) => setSelectedDateTime(date)}
+              dateFormat="yyyy년 MM월 dd일 HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
+              timeCaption="시간"
+              className="date-time-picker-input" // 커스텀 스타일 적용을 위한 클래스
+              wrapperClassName="date-time-picker-wrapper" // 래퍼에 스타일 적용을 위한 클래스
               popperPlacement="bottom-start"
               locale="ko" // 한국어 로케일 사용
-            />
-            <input
-              type="time"
-              className="time-input"
-              value={newTaskTime}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTaskTime(e.target.value)}
-              required
             />
           </div>
           <div className="input-row">
