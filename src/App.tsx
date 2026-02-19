@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import ko from 'date-fns/locale/ko'; // 한국어 로케일 임포트
+import 'react-datepicker/dist/react-datepicker.css';
 import './App.css';
+
+registerLocale('ko', ko); // 한국어 로케일 등록
 
 interface Task {
   id: string;
@@ -17,7 +22,7 @@ const App: React.FC = () => {
   });
   const [newTaskText, setNewTaskText] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
-  const [newTaskDate, setNewTaskDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newTaskDate, setNewTaskDate] = useState<Date | null>(new Date()); // Date 객체로 변경
 
   // 시계 업데이트
   useEffect(() => {
@@ -34,9 +39,11 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!newTaskText || !newTaskTime || !newTaskDate) return;
 
+    const formattedDate = newTaskDate.toISOString().split('T')[0]; // ISO 문자열로 저장
+
     const newTask: Task = {
       id: crypto.randomUUID(),
-      date: newTaskDate,
+      date: formattedDate,
       time: newTaskTime,
       text: newTaskText,
       completed: false,
@@ -51,6 +58,7 @@ const App: React.FC = () => {
 
     setNewTaskText('');
     setNewTaskTime('');
+    setNewTaskDate(new Date()); // 추가 후 현재 날짜로 초기화
   };
 
   const deleteTask = (id: string) => {
@@ -90,12 +98,14 @@ const App: React.FC = () => {
 
         <form onSubmit={addTask} className="input-group">
           <div className="input-row">
-            <input
-              type="date"
-              className="date-input"
-              value={newTaskDate}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTaskDate(e.target.value)}
-              required
+            <DatePicker
+              selected={newTaskDate}
+              onChange={(date: Date | null) => setNewTaskDate(date)}
+              dateFormat="yyyy년 MM월 dd일"
+              className="date-picker-input" // 커스텀 스타일 적용을 위한 클래스
+              wrapperClassName="date-picker-wrapper" // 래퍼에 스타일 적용을 위한 클래스
+              popperPlacement="bottom-start"
+              locale="ko" // 한국어 로케일 사용
             />
             <input
               type="time"
